@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시의 온도 · 한국 근대시 감정 분석</title>
+<meta name="description" content="한국 근대시 15편의 감정을 감정 사전과 해석으로 분석하는 웹앱">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>시의 온도</h1>
+    <p>한국 근대시 15편의 감정을 <b>감정 사전</b>과 <b>문학적 해석</b>으로 함께 읽습니다.</p>
+  </div>
+  <div class="weight" title="사전 점수와 해석 프로필을 섞는 비율">
+    <label for="w">사전 반영 비율 <output id="wOut">50%</output></label>
+    <input id="w" type="range" min="0" max="100" step="5" value="50">
+    <div class="weight-ends"><span>해석만</span><span>사전만</span></div>
+  </div>
+</header>
+
+<section class="shelf-wrap" aria-label="시 목록">
+  <div class="shelf-head">
+    <h2>작품 선반</h2>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="shelf" id="shelf" role="listbox" aria-label="15편의 시"></div>
+</section>
+
+<nav class="tabs" role="tablist" aria-label="보기 선택">
+  <button role="tab" data-tab="read" aria-selected="true">읽기</button>
+  <button role="tab" data-tab="chart">감정 차트</button>
+  <button role="tab" data-tab="flow">시어 흐름도</button>
+  <button role="tab" data-tab="compare">비교 · 감성 지도</button>
+  <button role="tab" data-tab="mine">내 시 분석</button>
+  <button role="tab" data-tab="method">분석 방법</button>
+</nav>
+
+<main id="main">
+  <!-- 읽기: F-02 본문, F-03 비율, F-04 행별 감정, F-05 지배 정서·해석 -->
+  <section class="panel" id="tab-read" role="tabpanel">
+    <div class="read-grid">
+      <article class="poem-card">
+        <header class="poem-head">
+          <h2 id="pTitle"></h2>
+          <p id="pMeta" class="meta"></p>
+        </header>
+        <div id="pText" class="poem-text"></div>
+        <p class="hint">밑줄은 감정 사전과 일치한 시어, 오른쪽 칩은 그 행에서 감지된 감정입니다.</p>
+      </article>
+      <aside class="summary">
+        <div class="dominant" id="pDominant"></div>
+        <h3>감정 비율</h3>
+        <div id="pBars" class="bars"></div>
+        <dl class="facts" id="pFacts"></dl>
+        <h3>감상과 해석</h3>
+        <p id="pInterp" class="interp"></p>
+        <blockquote id="pKey" class="key"></blockquote>
+        <p id="pSource" class="source"></p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 감정 차트: F-06 프로필, F-07 행별 흐름, F-09 추천 -->
+  <section class="panel" id="tab-chart" role="tabpanel" hidden>
+    <div class="chart-grid">
+      <div class="box">
+        <h3>감정 프로필</h3>
+        <p class="sub">실선: 선택한 시 · 점선: 가장 비슷한 시</p>
+        <div class="canvas-wrap"><canvas id="radar"></canvas></div>
+      </div>
+      <div class="box">
+        <h3>행별 감정 흐름</h3>
+        <p class="sub">가로축 행 번호, 세로축 그 행에서 감지된 시어 수</p>
+        <div class="canvas-wrap"><canvas id="flowChart"></canvas></div>
+      </div>
+    </div>
+    <div class="box">
+      <h3>비슷한 감성의 시</h3>
+      <p class="sub">최종 감정 비율 벡터의 코사인 유사도 상위 3편. 누르면 그 시로 이동합니다.</p>
+      <div class="recs" id="recs"></div>
+    </div>
+  </section>
+
+  <!-- 시어 흐름도: F-08 -->
+  <section class="panel" id="tab-flow" role="tabpanel" hidden>
+    <div class="box">
+      <h3>시어 → 감정 → 주제</h3>
+      <p class="sub">왼쪽: 사전에 잡힌 핵심 시어(등장 횟수) · 가운데: 감정(막대 길이 = 최종 비율) · 오른쪽: 주제</p>
+      <div id="flowSvg" class="flow-svg"></div>
+    </div>
+  </section>
+
+  <!-- 비교: F-10 히트맵, F-12 감성 지도 -->
+  <section class="panel" id="tab-compare" role="tabpanel" hidden>
+    <div class="box">
+      <h3>전체 비교 히트맵</h3>
+      <p class="sub">칸의 숫자는 최종 감정 비율(%)입니다. 행을 누르면 그 시로 이동합니다.</p>
+      <div class="heat-wrap" id="heat"></div>
+    </div>
+    <div class="box">
+      <h3>감성 지도 (주성분분석)</h3>
+      <p class="sub" id="pcaNote"></p>
+      <div id="pcaSvg" class="pca-svg"></div>
+    </div>
+  </section>
+
+  <!-- 내 시 분석: F-11 -->
+  <section class="panel" id="tab-mine" role="tabpanel" hidden>
+    <div class="box mine">
+      <h3>내 시 분석하기</h3>
+      <p class="sub">같은 감정 사전으로 분석합니다. 해석 프로필이 없으므로 사전 점수만 씁니다.</p>
+      <label>제목 <input id="mTitle" type="text" placeholder="예: 봄비"></label>
+      <label>본문 <textarea id="mText" rows="8" placeholder="행은 줄바꿈, 연은 빈 줄로 나눠 주세요."></textarea></label>
+      <div class="row"><button id="mRun" class="btn">분석하기</button><span id="mMsg" class="msg" role="status"></span></div>
+    </div>
+    <div id="mResult" hidden>
+      <div class="chart-grid">
+        <div class="box"><h3>감정 비율</h3><div id="mBars" class="bars"></div><div id="mDominant" class="dominant small"></div></div>
+        <div class="box"><h3>비슷한 감성의 시</h3><div class="recs" id="mRecs"></div></div>
+      </div>
+      <div class="box"><h3>행별 감정</h3><div id="mLines" class="poem-text"></div></div>
+    </div>
+  </section>
+
+  <!-- 분석 방법 -->
+  <section class="panel" id="tab-method" role="tabpanel" hidden>
+    <div class="box">
+      <h3>감정 범주 8개</h3>
+      <div id="emoDefs" class="emo-defs"></div>
+    </div>
+    <div class="box">
+      <h3>계산 방법</h3>
+      <ol class="steps">
+        <li>본문을 줄바꿈으로 행, 빈 줄로 연을 나눕니다.</li>
+        <li>각 행에서 감정 사전의 시어를 긴 것부터 찾아 감정별로 셉니다(부분 문자열 일치).</li>
+        <li>시 전체의 감정별 개수를 합계 1이 되도록 나눠 <b>사전 비율</b>을 만듭니다.</li>
+        <li>반어·역설·상징처럼 사전이 못 읽는 의미를 반영한 <b>해석 프로필</b>(0–1)도 합계 1로 맞춥니다.</li>
+        <li><b>최종 비율 = 사전 비율 × w + 해석 프로필 × (1 − w)</b>. 위쪽 슬라이더로 w를 바꾸면 모든 화면이 다시 계산됩니다.</li>
+        <li>추천은 최종 비율 벡터의 코사인 유사도, 감성 지도는 15편 벡터의 주성분분석으로 만듭니다.</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>감정 사전</h3>
+      <div id="lexTable" class="lex-table"></div>
+    </div>
+    <div class="box">
+      <h3>검증: 계산과 해석이 어긋나는 사례</h3>
+      <p class="sub">아래 숫자는 사전만 쓴 결과(w = 100%)입니다. 자세한 원인과 개선 방법은 README에 있습니다.</p>
+      <div id="checks"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>수록 작품은 모두 시인 사망 후 저작권 보호기간이 끝난 작품입니다. · 감성컴퓨팅 2026-2 개인 과제</p>
+</footer>
+
+<div id="tip" class="tip" role="tooltip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

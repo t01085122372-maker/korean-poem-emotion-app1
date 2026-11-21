@@ -114,8 +114,15 @@ main { padding: 20px clamp(16px, 4vw, 48px) 40px; }
 .sub { margin: 0 0 12px; color: var(--muted); font-size: .85rem; }
 
 /* 읽기 */
-.read-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }
-@media (max-width: 860px) { .read-grid { grid-template-columns: 1fr; } }
+.read-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.read-grid .poem-card { grid-row: span 2; }
+.read-grid .versus { grid-column: 2; margin: 0; }
+@media (max-width: 860px) {
+  .read-grid { grid-template-columns: 1fr; }
+  .read-grid .summary { order: -1; }
+  .read-grid .poem-card { grid-row: auto; }
+  .read-grid .versus { grid-column: auto; order: 1; }
+}
 .poem-head h2 { font-size: 1.3rem; }
 .meta { margin: .2rem 0 1rem; color: var(--muted); font-size: .9rem; }
 .poem-text { font-family: var(--serif); font-size: 1.04rem; }
@@ -205,7 +212,7 @@ table.heat { border-collapse: collapse; width: 100%; min-width: 640px; font-size
 .brand { flex: 1 1 320px; }
 
 /* 사전 기반 vs 문맥 기반 */
-.versus { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; background: var(--bg); }
+.versus { padding: 16px 18px; }
 .versus h4 { margin: 0 0 4px; font-family: var(--serif); font-size: 1rem; }
 .vs-key { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
 .vs-key i { display: inline-block; width: 18px; height: 8px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
@@ -228,3 +235,19 @@ table.vs { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 
 .vs tr { cursor: pointer; }
 .vs tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
 .vs tr.sel td:first-child { font-weight: 700; color: var(--accent); }
+
+/* 휴대폰: 필수 정보가 한 번의 스크롤 안에 보이도록 위쪽을 줄인다 */
+@media (max-width: 600px) {
+  .top { padding-top: 16px; padding-bottom: 12px; gap: 10px; }
+  .brand p { font-size: .85rem; }
+  .shelf-wrap { padding-top: 10px; }
+  .shelf-wrap .legend { display: none; }
+  .hero { padding: 14px; margin-top: 4px; gap: 8px; }
+  .hero-key, .thermo-legend { display: none; }
+  .hero-title { font-size: 1.35rem; margin-bottom: 8px; }
+  .nav { width: 34px; height: 34px; font-size: 1.2rem; }
+  .tabs { padding-top: 6px; }
+  main { padding-top: 12px; }
+  .summary .key { display: none; }
+}
+.chip, .thermo span { color: var(--on, #fff); }

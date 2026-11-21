@@ -4,6 +4,10 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const emo = k => EMO_BY_KEY[k];
+/* 색 위 글자: 흰색과 진한 먹색 중 대비가 큰 쪽을 고른다(N-04 접근성). */
+const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+const contrast = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+EMOTIONS.forEach(e => { const L = lum(e.color); e.on = contrast(L, 1) >= contrast(L, lum('#111111')) ? '#fff' : '#111'; });
 
 const state = {
   id: POEMS[0].id,
@@ -50,7 +54,7 @@ function linesHtml(lines) {
       pos = h.end;
     });
     tx += esc(l.text.slice(pos));
-    const chips = EMOTIONS.map((e, i) => l.counts[i] ? `<span class="chip" style="--c:${e.color}">${e.name}${l.counts[i] > 1 ? ' ×' + l.counts[i] : ''}</span>` : '').join('');
+    const chips = EMOTIONS.map((e, i) => l.counts[i] ? `<span class="chip" style="--c:${e.color};--on:${e.on}">${e.name}${l.counts[i] > 1 ? ' ×' + l.counts[i] : ''}</span>` : '').join('');
     html += `<div class="line"><span class="no">${l.no}</span><span class="tx">${tx}</span><span class="chips">${chips}</span></div>`;
   });
   return html + (st ? '</div>' : '');
@@ -115,7 +119,7 @@ function renderHero() {
   $('#hTitle').textContent = p.title;
   $('#hKey').textContent = p.key ? `“${p.key}”` : '';
   const order = EMOTIONS.map((x, i) => ({ ...x, v: pc[i] })).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
-  $('#thermo').innerHTML = order.map(x => `<span style="--c:${x.color};flex-basis:${x.v}%" title="${x.name} ${x.v}%">${x.v >= (innerWidth < 600 ? 14 : 9) ? x.name.split('·')[0] + ' ' + x.v + '%' : ''}</span>`).join('');
+  $('#thermo').innerHTML = order.map(x => `<span style="--c:${x.color};--on:${x.on};flex-basis:${x.v}%" title="${x.name} ${x.v}%">${x.v >= (innerWidth < 600 ? 14 : 9) ? x.name.split('·')[0] + ' ' + x.v + '%' : ''}</span>`).join('');
   $('#thermo').setAttribute('aria-label', '감정 온도계: ' + order.map(x => `${x.name} ${x.v}%`).join(', '));
   $('#thermoLegend').innerHTML = order.map(x => `<span><span class="dot" style="background:${x.color}"></span> <b>${x.name}</b> ${x.v}%</span>`).join('');
 }

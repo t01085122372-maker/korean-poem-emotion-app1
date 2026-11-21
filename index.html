@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="auto">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,7 @@
     <h1>시의 온도</h1>
     <p>한국 근대시 15편의 감정을 <b>감정 사전</b>과 <b>문학적 해석</b>으로 함께 읽습니다.</p>
   </div>
+  <button class="theme-btn" id="themeBtn" aria-label="밝은/어두운 테마 전환">◐ 테마</button>
   <div class="weight" title="사전 점수와 해석 프로필을 섞는 비율">
     <label for="w">사전 반영 비율 <output id="wOut">50%</output></label>
     <input id="w" type="range" min="0" max="100" step="5" value="50">
@@ -25,10 +26,27 @@
 
 <section class="shelf-wrap" aria-label="시 목록">
   <div class="shelf-head">
-    <h2>작품 선반</h2>
-    <div class="legend" id="legend"></div>
+    <h2>작품 15편</h2>
+    <div class="filters" role="group" aria-label="작품 거르기">
+      <button class="fchip" data-filter="all" aria-pressed="true">전체</button>
+      <button class="fchip" data-filter="new" aria-pressed="false">신규 8</button>
+      <button class="fchip" data-filter="old" aria-pressed="false">예시 7</button>
+    </div>
   </div>
   <div class="shelf" id="shelf" role="listbox" aria-label="15편의 시"></div>
+  <div class="legend" id="legend"></div>
+</section>
+
+<section class="hero" id="hero" aria-live="polite">
+  <button class="nav prev" id="prev" aria-label="이전 작품">‹</button>
+  <div class="hero-main">
+    <p class="hero-meta" id="hMeta"></p>
+    <h2 class="hero-title" id="hTitle"></h2>
+    <p class="hero-key" id="hKey"></p>
+    <div class="thermo" id="thermo" role="img"></div>
+    <div class="thermo-legend" id="thermoLegend"></div>
+  </div>
+  <button class="nav next" id="next" aria-label="다음 작품">›</button>
 </section>
 
 <nav class="tabs" role="tablist" aria-label="보기 선택">

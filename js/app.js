@@ -9,11 +9,13 @@ const state = {
   id: POEMS[0].id,
   w: 0.5,
   tab: 'read',
+  filter: 'all',
+  theme: 'auto',
   results: []
 };
 try { const s = JSON.parse(localStorage.getItem('poem-temp') || '{}'); Object.assign(state, s); } catch (e) {}
 if (!POEMS.some(p => p.id === state.id)) state.id = POEMS[0].id;
-const save = () => { try { localStorage.setItem('poem-temp', JSON.stringify({ id: state.id, w: state.w, tab: state.tab })); } catch (e) {} };
+const save = () => { try { localStorage.setItem('poem-temp', JSON.stringify({ id: state.id, w: state.w, tab: state.tab, filter: state.filter, theme: state.theme })); } catch (e) {} };
 
 const poemById = id => POEMS.find(p => p.id === id);
 const resultById = id => state.results.find(r => r.id === id);
@@ -65,17 +67,42 @@ function recsHtml(list) {
 }
 
 /* ---------- 작품 선반 (F-01) ---------- */
+const visiblePoems = () => POEMS.filter(p => state.filter === 'all' || (state.filter === 'new') === !!p.isNew);
 function renderShelf() {
   $('#legend').innerHTML = EMOTIONS.map(e => `<span><span class="dot" style="background:${e.color}"></span>${e.name}</span>`).join('');
+  document.querySelectorAll('.fchip').forEach(b => b.setAttribute('aria-pressed', b.dataset.filter === state.filter));
+  const vis = new Set(visiblePoems().map(p => p.id));
   $('#shelf').innerHTML = POEMS.map(p => {
     const r = resultById(p.id), e = emo(r.dominant);
-    return `<button class="book" role="option" data-go="${p.id}" aria-selected="${p.id === state.id}" style="--c:${e.color}">
+    return `<button class="book" role="option" data-go="${p.id}" aria-selected="${p.id === state.id}" style="--c:${e.color}"${vis.has(p.id) ? '' : ' hidden'}>
       ${p.isNew ? '<span class="new">NEW</span>' : ''}
-      <span class="t">${esc(p.title)}</span>
+      <span class="t" title="${esc(p.title)}">${esc(p.title)}</span>
       <span class="p">${esc(p.poet)} · ${p.year}</span><br>
       <span class="d"><span class="dot" style="background:${e.color}"></span>${e.name}</span>
     </button>`;
   }).join('');
+  const sel = $('#shelf .book[aria-selected="true"]');
+  if (sel && !sel.hidden) sel.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+/* ---------- 상단 배너: 감정 온도계 ---------- */
+function renderHero() {
+  const p = poemById(state.id), r = resultById(state.id), pc = toPercents(r.vec);
+  const e = emo(r.dominant);
+  $('#hero').style.setProperty('--hc', e.color);
+  $('#hMeta').textContent = `${p.poet} · ${p.year}${p.isNew ? ' · 신규 수록' : ''} · 지배 정서 ${e.name} ${pc[e.i]}%`;
+  $('#hTitle').textContent = p.title;
+  $('#hKey').textContent = p.key ? `“${p.key}”` : '';
+  const order = EMOTIONS.map((x, i) => ({ ...x, v: pc[i] })).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  $('#thermo').innerHTML = order.map(x => `<span style="--c:${x.color};flex-basis:${x.v}%" title="${x.name} ${x.v}%">${x.v >= (innerWidth < 600 ? 14 : 9) ? x.name.split('·')[0] + ' ' + x.v + '%' : ''}</span>`).join('');
+  $('#thermo').setAttribute('aria-label', '감정 온도계: ' + order.map(x => `${x.name} ${x.v}%`).join(', '));
+  $('#thermoLegend').innerHTML = order.map(x => `<span><span class="dot" style="background:${x.color}"></span> <b>${x.name}</b> ${x.v}%</span>`).join('');
+}
+function step(d) {
+  const list = visiblePoems();
+  let i = list.findIndex(p => p.id === state.id);
+  if (i < 0) i = 0; else i = (i + d + list.length) % list.length;
+  select(list[i].id, false);
 }
 
 /* ---------- 읽기 (F-02 ~ F-05) ---------- */
@@ -313,14 +340,20 @@ function renderTab() {
 function renderAll() {
   recompute();
   renderShelf();
+  renderHero();
   renderTab();
   if (!$('#mResult').hidden) runMine();
 }
-function select(id) {
+function select(id, scroll = true) {
   state.id = id; save();
-  renderShelf(); renderTab();
+  renderShelf(); renderHero(); renderTab();
   if (state.tab === 'mine' || state.tab === 'method') showTab('read');
-  $('.tabs').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (scroll) $('#hero').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
+  const label = { auto: '자동', light: '밝게', dark: '어둡게' }[state.theme];
+  $('#themeBtn').textContent = '◐ 테마: ' + label;
 }
 
 document.addEventListener('click', e => {
@@ -328,6 +361,19 @@ document.addEventListener('click', e => {
   if (go) select(go.dataset.go);
   const tab = e.target.closest('.tabs button');
   if (tab) showTab(tab.dataset.tab);
+  const f = e.target.closest('.fchip');
+  if (f) { state.filter = f.dataset.filter; save(); renderShelf(); }
+});
+$('#prev').addEventListener('click', () => step(-1));
+$('#next').addEventListener('click', () => step(1));
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowLeft') step(-1);
+  if (e.key === 'ArrowRight') step(1);
+});
+$('#themeBtn').addEventListener('click', () => {
+  state.theme = { auto: 'dark', dark: 'light', light: 'auto' }[state.theme];
+  applyTheme(); save(); renderTab();
 });
 $('#w').addEventListener('input', e => {
   state.w = e.target.value / 100;
@@ -346,6 +392,8 @@ document.addEventListener('mousemove', e => { if (!tip.hidden) { tip.style.left 
 
 $('#w').value = Math.round(state.w * 100);
 $('#wOut').textContent = Math.round(state.w * 100) + '%';
+applyTheme();
 recompute();
 renderShelf();
+renderHero();
 showTab(state.tab);

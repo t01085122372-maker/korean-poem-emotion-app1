@@ -14,13 +14,13 @@
 <header class="top">
   <div class="brand">
     <h1>시의 온도</h1>
-    <p>한국 근대시 15편의 감정을 <b>감정 사전</b>과 <b>문학적 해석</b>으로 함께 읽습니다.</p>
+    <p>한국 근대시 15편의 감정을 <b>사전 기반</b>(낱말)과 <b>문맥 기반</b>(흐름·화자·시대)으로 나란히 읽습니다.</p>
   </div>
   <button class="theme-btn" id="themeBtn" aria-label="밝은/어두운 테마 전환">◐ 테마</button>
-  <div class="weight" title="사전 점수와 해석 프로필을 섞는 비율">
-    <label for="w">사전 반영 비율 <output id="wOut">50%</output></label>
+  <div class="weight" title="사전 기반 비율과 문맥 기반 비율을 섞는 비율">
+    <label for="w">사전 기반 반영 <output id="wOut">50%</output></label>
     <input id="w" type="range" min="0" max="100" step="5" value="50">
-    <div class="weight-ends"><span>해석만</span><span>사전만</span></div>
+    <div class="weight-ends"><span>← 문맥 기반만</span><span>사전 기반만 →</span></div>
   </div>
 </header>
 
@@ -72,8 +72,9 @@
       </article>
       <aside class="summary">
         <div class="dominant" id="pDominant"></div>
-        <h3>감정 비율</h3>
+        <h3>최종 감정 비율</h3>
         <div id="pBars" class="bars"></div>
+        <div class="versus" id="pVersus"></div>
         <dl class="facts" id="pFacts"></dl>
         <h3>감상과 해석</h3>
         <p id="pInterp" class="interp"></p>
@@ -121,6 +122,11 @@
       <div class="heat-wrap" id="heat"></div>
     </div>
     <div class="box">
+      <h3>사전 기반 vs 문맥 기반 · 15편 비교</h3>
+      <p class="sub">두 기준의 1위 정서와 일치도(두 비율 벡터의 코사인 유사도). 일치도가 낮은 시부터 보여 줍니다. 행을 누르면 그 시로 이동합니다.</p>
+      <div class="heat-wrap" id="vsTable"></div>
+    </div>
+    <div class="box">
       <h3>감성 지도 (주성분분석)</h3>
       <p class="sub" id="pcaNote"></p>
       <div id="pcaSvg" class="pca-svg"></div>
@@ -131,7 +137,7 @@
   <section class="panel" id="tab-mine" role="tabpanel" hidden>
     <div class="box mine">
       <h3>내 시 분석하기</h3>
-      <p class="sub">같은 감정 사전으로 분석합니다. 해석 프로필이 없으므로 사전 점수만 씁니다.</p>
+      <p class="sub">같은 감정 사전으로 분석합니다. 직접 입력한 시는 문맥 기반 값이 없으므로 사전 기반 비율만 씁니다.</p>
       <label>제목 <input id="mTitle" type="text" placeholder="예: 봄비"></label>
       <label>본문 <textarea id="mText" rows="8" placeholder="행은 줄바꿈, 연은 빈 줄로 나눠 주세요."></textarea></label>
       <div class="row"><button id="mRun" class="btn">분석하기</button><span id="mMsg" class="msg" role="status"></span></div>
@@ -156,9 +162,10 @@
       <ol class="steps">
         <li>본문을 줄바꿈으로 행, 빈 줄로 연을 나눕니다.</li>
         <li>각 행에서 감정 사전의 시어를 긴 것부터 찾아 감정별로 셉니다(부분 문자열 일치).</li>
-        <li>시 전체의 감정별 개수를 합계 1이 되도록 나눠 <b>사전 비율</b>을 만듭니다.</li>
-        <li>반어·역설·상징처럼 사전이 못 읽는 의미를 반영한 <b>해석 프로필</b>(0–1)도 합계 1로 맞춥니다.</li>
-        <li><b>최종 비율 = 사전 비율 × w + 해석 프로필 × (1 − w)</b>. 위쪽 슬라이더로 w를 바꾸면 모든 화면이 다시 계산됩니다.</li>
+        <li>두 가지 오탐 규칙을 적용합니다: ‘사랑보다도’처럼 <b>‘~보다’ 앞의 비교 대상</b>은 세지 않고, ‘스치운다’의 ‘운다’처럼 <b>다른 낱말 속의 짧은 시어</b>는 어절 첫머리에서만 인정합니다.</li>
+        <li>시 전체의 감정별 개수를 합계 1이 되도록 나눠 <b>사전 기반 비율</b>을 만듭니다. 이것이 과제의 정량 분석(방법 A)입니다.</li>
+        <li>낱말이 아니라 <b>① 시의 흐름</b>(수미상관·마지막 연·반전), <b>② 화자의 상황</b>, <b>③ 당대 시대배경</b>으로 정서 강도(0–1)를 정하고 합계 1로 맞춘 것이 <b>문맥 기반 비율</b>입니다. 시마다 근거를 ‘읽기’ 탭에 적었습니다.</li>
+        <li><b>최종 비율 = 사전 기반 × w + 문맥 기반 × (1 − w)</b>. 위쪽 슬라이더로 w를 바꾸면 모든 화면이 다시 계산됩니다.</li>
         <li>추천은 최종 비율 벡터의 코사인 유사도, 감성 지도는 15편 벡터의 주성분분석으로 만듭니다.</li>
       </ol>
     </div>
@@ -168,7 +175,7 @@
     </div>
     <div class="box">
       <h3>검증: 계산과 해석이 어긋나는 사례</h3>
-      <p class="sub">아래 숫자는 사전만 쓴 결과(w = 100%)입니다. 자세한 원인과 개선 방법은 README에 있습니다.</p>
+      <p class="sub">사전 기반 결과와 문맥 기반 1위를 비교합니다. 자세한 원인과 개선 방법은 README에 있습니다.</p>
       <div id="checks"></div>
     </div>
   </section>

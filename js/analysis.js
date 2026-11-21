@@ -14,6 +14,7 @@ LEX_ENTRIES.sort((a, b) => b.w.length - a.w.length);
 const LEX_MAP = new Map(LEX_ENTRIES.map(o => [o.w, o.k]));
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const LEX_RE = new RegExp(LEX_ENTRIES.map(o => escapeRe(o.w)).join('|'), 'g');
+const HEAD_ONLY = new Set(['운다']);
 
 const zeros = () => EMO_KEYS.map(() => 0);
 const sum = a => a.reduce((s, x) => s + x, 0);
@@ -41,6 +42,11 @@ function analyzeText(text) {
     LEX_RE.lastIndex = 0;
     while ((m = LEX_RE.exec(l.text)) !== null) {
       const k = LEX_MAP.get(m[0]);
+      const end = m.index + m[0].length;
+      // 규칙 1: '사랑보다도'처럼 비교 대상으로만 쓰인 시어는 세지 않는다.
+      if (/^(이|가)?보다/.test(l.text.slice(end, end + 4))) continue;
+      // 규칙 2: 오탐이 확인된 짧은 시어는 어절 첫머리에서만 인정한다(예: '스치운다'의 '운다').
+      if (HEAD_ONLY.has(m[0]) && m.index > 0 && /[가-힣]/.test(l.text[m.index - 1])) continue;
       counts[EMO_BY_KEY[k].i]++;
       hits.push({ w: m[0], k, start: m.index, end: m.index + m[0].length });
     }
@@ -51,13 +57,13 @@ function analyzeText(text) {
   return { lines, total, lexVec: normalize(total) };
 }
 
-/* 해석 기반 프로필을 범주 순서 벡터로 바꾼다. */
+/* 문맥 기반 정서 강도(profile)를 범주 순서 벡터로 바꾼다. */
 function profileVec(poem) {
   return normalize(EMO_KEYS.map(k => (poem.profile && poem.profile[k]) || 0));
 }
 
-/* 5.3 최종 감정 비율: 사전 비율 × w + 해석 프로필 × (1 − w)
-   사전에서 아무것도 잡히지 않으면 해석 프로필만 쓴다. */
+/* 5.4 최종 감정 비율: 사전 기반 × w + 문맥 기반 × (1 − w)
+   사전에서 아무것도 잡히지 않으면 문맥 기반만, 문맥 기반이 없으면(직접 입력한 시) 사전 기반만 쓴다. */
 function analyzePoem(poem, w) {
   const a = analyzeText(poem.text);
   const pv = profileVec(poem);
@@ -72,6 +78,7 @@ function analyzePoem(poem, w) {
     vec,
     lexVec: a.lexVec,
     profVec: pv,
+    ctxVec: pv,
     dominant: sum(vec) > 0 ? EMO_KEYS[di] : null,
     lines: a.lines,
     total: a.total,

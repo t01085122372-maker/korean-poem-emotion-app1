@@ -135,7 +135,7 @@ mark.hit { background: none; color: inherit; border-bottom: 2.5px solid var(--c)
 .bars { display: grid; gap: 6px; margin-bottom: 14px; }
 .bar { display: grid; grid-template-columns: 5.6em 1fr 3em; align-items: center; gap: 8px; font-size: .85rem; }
 .bar .track { height: 12px; background: var(--line); border-radius: 99px; overflow: hidden; }
-.bar .fill { height: 100%; background: var(--c); border-radius: 99px; transition: width .3s; }
+.bar .fill { display: block; height: 100%; background: var(--c); border-radius: 99px; transition: width .3s; }
 .bar .v { text-align: right; font-variant-numeric: tabular-nums; }
 .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: .88rem; margin: 0 0 14px; }
 .facts dt { color: var(--muted); }
@@ -203,3 +203,28 @@ table.heat { border-collapse: collapse; width: 100%; min-width: 640px; font-size
   .canvas-wrap { height: 280px; }
 }
 .brand { flex: 1 1 320px; }
+
+/* 사전 기반 vs 문맥 기반 */
+.versus { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; background: var(--bg); }
+.versus h4 { margin: 0 0 4px; font-family: var(--serif); font-size: 1rem; }
+.vs-key { display: flex; gap: 14px; font-size: .78rem; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
+.vs-key i { display: inline-block; width: 18px; height: 8px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
+.vs-key .lx { background: var(--ink); }
+.vs-key .cx { background: repeating-linear-gradient(45deg, var(--ink) 0 2px, transparent 2px 5px); border: 1px solid var(--ink); }
+.vs-row { display: grid; grid-template-columns: 5.6em 1fr 5.4em; gap: 8px; align-items: center; font-size: .8rem; margin-bottom: 5px; }
+.vs-bars { display: grid; gap: 2px; }
+.vs-bars span { height: 7px; border-radius: 4px; background: var(--c); min-width: 1px; transition: width .3s; }
+.vs-bars span.ctx { background: repeating-linear-gradient(45deg, var(--c) 0 2px, transparent 2px 5px); border: 1px solid var(--c); }
+.vs-row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.vs-sum { font-size: .85rem; margin: 8px 0 4px; }
+.vs-sum b { font-variant-numeric: tabular-nums; }
+.ctx-note { font-size: .84rem; margin: 6px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); }
+.badge { font-size: .72rem; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); white-space: nowrap; }
+.badge.ok { background: color-mix(in srgb, #3f9a6e 18%, transparent); }
+.badge.no { background: color-mix(in srgb, #9b2335 18%, transparent); }
+table.vs { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .85rem; }
+.vs th, .vs td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.vs th { color: var(--muted); font-weight: 500; }
+.vs tr { cursor: pointer; }
+.vs tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.vs tr.sel td:first-child { font-weight: 700; color: var(--accent); }

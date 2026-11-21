@@ -66,6 +66,27 @@ function recsHtml(list) {
   }).join('');
 }
 
+/* ---------- 사전 기반 vs 문맥 기반 ---------- */
+const topOf = v => { const m = Math.max(...v); return m > 0 ? EMOTIONS[v.indexOf(m)] : null; };
+function versusHtml(p, r) {
+  const lp = toPercents(r.lexVec), cp = toPercents(r.ctxVec);
+  const lt = topOf(r.lexVec), ct = topOf(r.ctxVec);
+  const agree = Math.round(cosine(r.lexVec, r.ctxVec) * 100);
+  const same = lt && ct && lt.k === ct.k;
+  const rows = EMOTIONS.map((e, i) => (lp[i] || cp[i]) ? `
+    <div class="vs-row" style="--c:${e.color}">
+      <span>${e.name}</span>
+      <span class="vs-bars"><span style="width:${lp[i]}%"></span><span class="ctx" style="width:${cp[i]}%"></span></span>
+      <span class="v">${lp[i]} / ${cp[i]}%</span>
+    </div>` : '').join('');
+  return `<h4>사전 기반 vs 문맥 기반</h4>
+    <div class="vs-key"><span><i class="lx"></i>사전 기반(낱말)</span><span><i class="cx"></i>문맥 기반(흐름·화자·시대)</span></div>
+    ${rows}
+    <p class="vs-sum">사전 1위 <b>${lt ? lt.name : '없음'}</b> · 문맥 1위 <b>${ct.name}</b> · 일치도 <b>${agree}%</b>
+      <span class="badge ${same ? 'ok' : 'no'}">${same ? '1위 일치' : '1위 다름'}</span></p>
+    <p class="ctx-note"><b>문맥 근거</b> ${esc(p.context || '')}</p>`;
+}
+
 /* ---------- 작품 선반 (F-01) ---------- */
 const visiblePoems = () => POEMS.filter(p => state.filter === 'all' || (state.filter === 'new') === !!p.isNew);
 function renderShelf() {
@@ -115,6 +136,7 @@ function renderRead() {
   d.style.setProperty('--c', emo(r.dominant).color);
   d.innerHTML = dominantHtml(r);
   $('#pBars').innerHTML = barsHtml(r.vec);
+  $('#pVersus').innerHTML = versusHtml(p, r);
   $('#pFacts').innerHTML = [['주제', p.theme], ['화자', p.speaker], ['표현', p.devices]]
     .filter(x => x[1]).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
   $('#pInterp').textContent = p.interp;
@@ -237,6 +259,15 @@ function renderCompare() {
   }).join('');
   $('#heat').innerHTML = `<table class="heat"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
 
+  const vs = state.results.map(r => ({ r, p: poemById(r.id), lt: topOf(r.lexVec), ct: topOf(r.ctxVec), a: cosine(r.lexVec, r.ctxVec) }))
+    .sort((x, y) => x.a - y.a);
+  const dot = e => e ? `<span class="dot" style="background:${e.color}"></span> ${e.name}` : '없음';
+  $('#vsTable').innerHTML = `<table class="vs"><thead><tr><th>작품</th><th>사전 기반 1위</th><th>문맥 기반 1위</th><th>일치도</th><th></th></tr></thead><tbody>` +
+    vs.map(x => `<tr data-go="${x.p.id}" class="${x.p.id === state.id ? 'sel' : ''}"><td>${esc(x.p.title)}</td><td>${dot(x.lt)}</td><td>${dot(x.ct)}</td><td>${Math.round(x.a * 100)}%</td>
+      <td><span class="badge ${x.lt && x.lt.k === x.ct.k ? 'ok' : 'no'}">${x.lt && x.lt.k === x.ct.k ? '일치' : '다름'}</span></td></tr>`).join('') + '</tbody></table>';
+  const n = vs.filter(x => x.lt && x.lt.k === x.ct.k).length;
+  $('#vsTable').insertAdjacentHTML('beforeend', `<p class="sub" style="margin-top:8px">15편 중 ${n}편은 두 기준의 1위가 같고, ${15 - n}편은 다릅니다.</p>`);
+
   const { comps, points, explained } = pca2(state.results.map(r => r.vec));
   const axisDesc = v => {
     const s = EMOTIONS.map((e, i) => ({ n: e.name, v: v[i] })).sort((a, b) => b.v - a.v);
@@ -303,25 +334,25 @@ function runMine() {
 
 /* ---------- 분석 방법 ---------- */
 const CHECKS = [
-  { id: 'azalea', title: '반어를 읽지 못함', expect: 'love',
-    why: '‘역겨워’와 ‘즈려밟고’가 원망으로 잡혀 사전만으로는 분노·원망이 1위가 된다. 그러나 ‘역겨워’는 임의 마음을 가정한 말이고, ‘죽어도 아니 눈물 흘리오리다’는 슬픔을 억누르는 반어다.' },
-  { id: 'nongae', title: '사랑이라는 낱말에 끌려감', expect: 'will',
-    why: '‘사랑보다도 강하다’는 비교 대상일 뿐인데 ‘사랑·정열·꽃다운’이 사랑으로 잡히고, ‘물결·강물’이 평온으로 잡힌다. 희생과 저항을 뜻하는 낱말은 사전에 없어 의지·저항이 0%가 된다.' },
-  { id: 'cat', title: '중의적 낱말과 범주 배정 문제', expect: 'joy',
-    why: '‘봄’을 의지·저항(희망) 시어로 넣은 탓에 봄이 네 번 나오는 이 시가 의지·저항 1위가 된다. ‘미친 봄의 불길’의 ‘미친’도 생명력의 과장인데 분노로 잡힌다.' },
-  { id: 'seosi', title: '부분 문자열 오탐', expect: 'reflect',
-    why: '‘스치운다’ 속의 ‘운다’가 슬픔으로 잡히고, ‘죽는 날까지’, ‘죽어 가는 것’도 슬픔으로 세어진다. 이 시의 중심인 부끄럼·괴로움보다 슬픔이 높게 나온다.' },
-  { id: 'spring-field', title: '표면의 기쁨과 이면의 비애', expect: 'sad',
-    why: '들판을 걷는 가운데 연들의 ‘반갑다·웃네·고맙게·가뿐하다’가 기쁨으로 잡힌다. 하지만 시 전체는 국토를 빼앗긴 비애로 감싸여 있고, 마지막 행의 탄식이 핵심이다. 해석 프로필을 50% 섞어도 기쁨이 1위로 남는다.' }
+  { id: 'nongae', title: '비교 대상과 후렴에 끌려감',
+    why: '‘사랑보다도’ 규칙으로 비교 대상 ‘사랑’은 빠졌지만 ‘정열·아리땁·입맞추·꽃다운·그대’가 사랑으로, 후렴의 ‘물결’과 3연의 ‘강물’이 평온으로 세어진다. 문맥상 이 시는 순국의 의지와 분노를 찬양한다.' },
+  { id: 'spring-field', title: '표면의 기쁨과 이면의 비애',
+    why: '가운데 연의 ‘반갑다·웃네·고맙게·가뿐하다’가 기쁨으로 잡힌다. 그러나 시는 물음으로 시작해 ‘봄조차 빼앗기겠네’라는 탄식으로 끝나며, 그 기쁨은 꿈결 속의 착각이다.' },
+  { id: 'azalea', title: '반어를 읽지 못함',
+    why: '‘역겨워’(1·4연 반복)와 ‘즈려밟고’가 원망으로 잡힌다. ‘죽어도 아니 눈물 흘리오리다’는 울지 않겠다는 반어로 슬픔을 드러내는데, 사전은 부정과 반어를 구분하지 못한다.' },
+  { id: 'cat', title: '중의적 낱말과 범주 배정',
+    why: '‘봄’을 희망의 시어로 의지·저항에 넣었는데 이 시에서는 계절 그 자체다. ‘미친 봄의 불길’의 ‘미친’도 생명력의 과장인데 분노로 잡힌다.' },
+  { id: 'boat', title: '떠남의 결심과 미련',
+    why: '수미의 ‘간다·가련다’가 반복돼 의지가 1위가 된다. 문맥상 띄어 적은 ‘나 두 야’는 머뭇거림이고, 가운데 연은 두고 가는 사람들에 대한 슬픔과 그리움이다.' }
 ];
 function renderMethod() {
   $('#emoDefs').innerHTML = EMOTIONS.map(e => `<div class="emo-def" style="--c:${e.color}"><b>${e.name}</b> <small>(${e.k})</small><p>${e.def}</p></div>`).join('');
   $('#lexTable').innerHTML = EMOTIONS.map(e => `<div class="lex-row" style="--c:${e.color}"><b>${e.name} (${LEXICON[e.k].length})</b><span>${LEXICON[e.k].map(esc).join(', ')}</span></div>`).join('');
   $('#checks').innerHTML = CHECKS.map((c, n) => {
-    const p = poemById(c.id), lex = analyzePoem(p, 1), pc = toPercents(lex.vec);
+    const p = poemById(c.id), r = resultById(c.id), pc = toPercents(r.lexVec);
     const top = EMOTIONS.map((e, i) => ({ e, v: pc[i] })).sort((a, b) => b.v - a.v).slice(0, 3);
     return `<div class="check"><h4>${n + 1}. 「${esc(p.title)}」 · ${c.title}</h4>
-      <p><b>사전 계산:</b> ${top.map(t => `${t.e.name} ${t.v}%`).join(', ')} → <b>해석상 중심:</b> ${emo(c.expect).name}</p>
+      <p><b>사전 기반:</b> ${top.map(t => `${t.e.name} ${t.v}%`).join(', ')} → <b>문맥 기반 1위:</b> ${topOf(r.ctxVec).name} · 일치도 ${Math.round(cosine(r.lexVec, r.ctxVec) * 100)}%</p>
       <p>${c.why}</p></div>`;
   }).join('');
 }

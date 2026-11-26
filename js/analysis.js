@@ -33,6 +33,26 @@ function splitPoem(text) {
   return lines;
 }
 
+/* 한자 병기('江[강]물', '관(冠)이')는 읽기용 표기이므로 사전 비교 때는 한글만 남긴다.
+   원문 위치로 되돌릴 수 있게 글자마다 원문의 시작·끝 위치를 함께 기록한다. */
+const HANJA = '\\u3400-\\u9FFF\\uF900-\\uFAFF';
+const HANJA_RE = new RegExp(`([${HANJA}]+)\\[([^\\]]*)\\]|\\(([${HANJA}]+)\\)`, 'g');
+function stripHanja(s) {
+  let plain = '', st = [], en = [], pos = 0, m;
+  const keep = (from, to, gs, ge) => { for (let i = from; i < to; i++) { plain += s[i]; st.push(gs ?? i); en.push(ge ?? i + 1); } };
+  HANJA_RE.lastIndex = 0;
+  while ((m = HANJA_RE.exec(s)) !== null) {
+    keep(pos, m.index);
+    if (m[2] !== undefined) {               // 江[강] → 강 (위치는 '江[강]' 전체)
+      const inner = m.index + m[1].length + 1;
+      keep(inner, inner + m[2].length, m.index, m.index + m[0].length);
+    }                                        // (冠) → 없앰
+    pos = m.index + m[0].length;
+  }
+  keep(pos, s.length);
+  return { plain, st, en };
+}
+
 /* 5.2 행 단위 감정 사전 분석 */
 function analyzeText(text) {
   const lines = splitPoem(text).map(l => {
@@ -40,15 +60,16 @@ function analyzeText(text) {
     const hits = [];
     let m;
     LEX_RE.lastIndex = 0;
-    while ((m = LEX_RE.exec(l.text)) !== null) {
+    const { plain, st, en } = stripHanja(l.text);
+    while ((m = LEX_RE.exec(plain)) !== null) {
       const k = LEX_MAP.get(m[0]);
       const end = m.index + m[0].length;
       // 규칙 1: '사랑보다도'처럼 비교 대상으로만 쓰인 시어는 세지 않는다.
-      if (/^(이|가)?보다/.test(l.text.slice(end, end + 4))) continue;
+      if (/^(이|가)?보다/.test(plain.slice(end, end + 4))) continue;
       // 규칙 2: 오탐이 확인된 짧은 시어는 어절 첫머리에서만 인정한다(예: '스치운다'의 '운다').
-      if (HEAD_ONLY.has(m[0]) && m.index > 0 && /[가-힣]/.test(l.text[m.index - 1])) continue;
+      if (HEAD_ONLY.has(m[0]) && m.index > 0 && /[가-힣]/.test(plain[m.index - 1])) continue;
       counts[EMO_BY_KEY[k].i]++;
-      hits.push({ w: m[0], k, start: m.index, end: m.index + m[0].length });
+      hits.push({ w: m[0], k, start: st[m.index], end: en[end - 1] });
     }
     return { ...l, counts, hits };
   });
